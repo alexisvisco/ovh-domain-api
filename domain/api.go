@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/alexisvisco/ovh-domain-api/domain/subsidiary"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,7 @@ type ErrorKnown error
 
 var (
 	UnknownExtension ErrorKnown = errors.New("unknown extension")
+	InvalidCartId    ErrorKnown = errors.New("invalid cart id")
 )
 
 type InfoDomain interface {
@@ -82,10 +84,12 @@ func (c *Client) DomainInfo(domain string) (results FullResults, err error) {
 	v := &FullResults{}
 	if bytes.Contains(by, []byte("Extension not managed")) {
 		return *v, UnknownExtension
+	} else if bytes.Contains(by, []byte("invalid cartId")) {
+		return *v, InvalidCartId
 	}
 	err = json.Unmarshal(by, v)
 	if err != nil {
-		return FullResults{}, err
+		return FullResults{}, fmt.Errorf("%s message=%s", err.Error(), string(by))
 	}
 	defer resp.Body.Close()
 	return *v, nil
@@ -108,10 +112,12 @@ func (c *Client) MinimalDomainInfo(domain string) (results MinimalResults, err e
 	v := &MinimalResults{}
 	if bytes.Contains(by, []byte("Extension not managed")) {
 		return *v, UnknownExtension
+	} else if bytes.Contains(by, []byte("invalid cartId")) {
+		return *v, InvalidCartId
 	}
 	err = json.Unmarshal(by, v)
 	if err != nil {
-		return MinimalResults{}, err
+		return MinimalResults{}, fmt.Errorf("%s message=%s", err.Error(), string(by))
 	}
 	defer resp.Body.Close()
 	return *v, nil

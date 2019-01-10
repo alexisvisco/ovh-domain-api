@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	client, e := domain.NewClient(subsidiary.FR)
+	client, e := domain.NewClient(subsidiary.EU)
 	if e != nil {
 		panic(e)
 	}

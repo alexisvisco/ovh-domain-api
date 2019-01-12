@@ -8,6 +8,7 @@ import (
 	"github.com/alexisvisco/ovh-domain-api/domain/subsidiary"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type ErrorKnown error
@@ -54,7 +55,8 @@ type FullResults []ResultDomain
 type MinimalResults []MinimalResultDomain
 
 type Client struct {
-	Cart Cart
+	Cart       Cart
+	subsidiary subsidiary.List
 }
 
 func NewClient(subsidiary subsidiary.List) (client *Client, err error) {
@@ -63,8 +65,20 @@ func NewClient(subsidiary subsidiary.List) (client *Client, err error) {
 		return nil, err
 	}
 	return &Client{
-		Cart: *cart,
+		Cart:       *cart,
+		subsidiary: subsidiary,
 	}, nil
+}
+
+func (c *Client) RegenerateCart() {
+	for {
+		cart, err := newCart(c.subsidiary)
+		if err == nil {
+			c.Cart = cart
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // InfoDomain return all information from ovh about a domain
@@ -86,6 +100,9 @@ func (c *Client) DomainInfo(domain string) (results FullResults, err error) {
 		return *v, UnknownExtension
 	} else if bytes.Contains(by, []byte("invalid cartId")) {
 		return *v, InvalidCartId
+	} else if bytes.Contains(by, []byte("Cart expired")) {
+		c.RegenerateCart()
+		return c.DomainInfo(domain)
 	}
 	err = json.Unmarshal(by, v)
 	if err != nil {
@@ -114,6 +131,9 @@ func (c *Client) MinimalDomainInfo(domain string) (results MinimalResults, err e
 		return *v, UnknownExtension
 	} else if bytes.Contains(by, []byte("invalid cartId")) {
 		return *v, InvalidCartId
+	} else if bytes.Contains(by, []byte("Cart expired")) {
+		c.RegenerateCart()
+		return c.MinimalDomainInfo(domain)
 	}
 	err = json.Unmarshal(by, v)
 	if err != nil {

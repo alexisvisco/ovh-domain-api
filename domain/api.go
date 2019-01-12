@@ -74,7 +74,7 @@ func (c *Client) RegenerateCart() {
 	for {
 		cart, err := newCart(c.subsidiary)
 		if err == nil {
-			c.Cart = cart
+			c.Cart = *cart
 			return
 		}
 		time.Sleep(1 * time.Second)
